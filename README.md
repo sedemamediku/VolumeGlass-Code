@@ -33,6 +33,7 @@ A beautiful, iOS-style volume indicator for macOS that replaces the default syst
 2. Open the DMG file
 3. Drag VolumeGlass to your Applications folder
 4. Launch VolumeGlass
+6. It may say that macOS cannot guarantee that this app is free form malware this is becuase I have not payed for a payed for a apple developer account as I cannot pay for that right now go to settings and privacy and security and scroll down and click open anyway.
 5. Follow the setup walkthrough
 6. Grant accessibility permissions when prompted
 
