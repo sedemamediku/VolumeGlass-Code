@@ -83,9 +83,9 @@ struct PositionSelectorView: View {
     
     private func iconForPosition(_ position: VolumeBarPosition) -> String {
         switch position {
-        case .leftMiddleVertical: return "sidebar.left"
-        case .bottomVertical: return "rectangle.portrait.bottomhalf.filled"
-        case .rightVertical: return "sidebar.right"
+        case .leftMiddleVertical: return "rectangle.lefthalf.inset.filled"
+        case .bottomVertical: return "rectangle.bottomhalf.inset.filled"
+        case .rightVertical: return "rectangle.righthalf.inset.filled"
         case .topHorizontal: return "rectangle.topthird.inset.filled"
         case .bottomHorizontal: return "rectangle.bottomthird.inset.filled"
         case .custom: return "hand.draw"
