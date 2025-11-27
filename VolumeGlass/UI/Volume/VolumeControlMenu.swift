@@ -1,5 +1,39 @@
 import SwiftUI
 
+// Custom transition for submenu removal - smoothly moves behind main menu
+extension AnyTransition {
+    static func squeezeOut(edge: Edge) -> AnyTransition {
+        AnyTransition.asymmetric(
+            insertion: .move(edge: edge).combined(with: .opacity),
+            removal: .move(edge: edge).combined(with: .opacity)
+        )
+    }
+}
+
+// Separate modifier for slow fade as it moves behind main menu
+struct EarlyFadeModifier: ViewModifier {
+    let isVisible: Bool
+    @State private var opacity: Double = 1.0
+    
+    func body(content: Content) -> some View {
+        content
+            .opacity(opacity)
+            .onChange(of: isVisible) { oldValue, newValue in
+                if !newValue {
+                    // Fade out slowly as it moves behind main menu
+                    withAnimation(.easeOut(duration: 0.4)) {
+                        opacity = 0.0
+                    }
+                } else {
+                    // Fade in quickly when appearing
+                    withAnimation(.easeIn(duration: 0.15)) {
+                        opacity = 1.0
+                    }
+                }
+            }
+    }
+}
+
 // Background view matching Apple's System Settings style
 struct SettingsBackground: View {
     @Environment(\.colorScheme) var colorScheme
@@ -72,20 +106,16 @@ struct VolumeControlMenu: View {
     
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            // Main menu
+            // Main menu - appears on top
             mainMenuView
+                .zIndex(1)
             
-            // Side panel
-            if let activePanel = activePanel {
-                sidePanelView(for: activePanel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: isRightSide ? .leading : .trailing)
-                            .combined(with: .opacity)
-                            .combined(with: .scale(scale: 0.95)),
-                        removal: .move(edge: isRightSide ? .leading : .trailing)
-                            .combined(with: .opacity)
-                            .combined(with: .scale(scale: 0.95))
-                    ))
+            // Side panel - appears behind main menu
+            if let panel = activePanel {
+                sidePanelView(for: panel)
+                    .zIndex(0)
+                    .modifier(EarlyFadeModifier(isVisible: activePanel != nil))
+                    .transition(.squeezeOut(edge: isRightSide ? .trailing : .leading))
             }
             
             // Close button - appears next to menu/submenu, centered vertically
@@ -95,7 +125,8 @@ struct VolumeControlMenu: View {
                 .allowsHitTesting(true)
                 .contentShape(Circle())
         }
-        .animation(.spring(response: settings.animationSpeed.springResponse, dampingFraction: settings.animationSpeed.springDamping), value: activePanel?.id)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: activePanel?.id)
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: activePanel == nil)
         .onAppear {
             editingBarSize = setupState.barSize
         }
@@ -186,6 +217,7 @@ struct VolumeControlMenu: View {
                         }
                     }
                     .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
                     
                 }
                 
@@ -252,7 +284,7 @@ struct VolumeControlMenu: View {
                         // Only show back button (icon only) for position panel
                         if panel == .position {
                             Button(action: {
-                                withAnimation(.spring(response: settings.animationSpeed.springResponse, dampingFraction: settings.animationSpeed.springDamping)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                     // Go back to settings, don't close
                                     activePanel = .settings
                                 }
@@ -526,7 +558,7 @@ struct VolumeControlMenu: View {
                 label: "Change Position",
                 hasSubmenu: true,
                 action: {
-                    withAnimation(.spring(response: settings.animationSpeed.springResponse, dampingFraction: settings.animationSpeed.springDamping)) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         activePanel = .position
                     }
                     if settings.hapticFeedbackEnabled {
@@ -675,9 +707,9 @@ struct VolumeControlMenu: View {
     
     private func iconForPosition(_ position: VolumeBarPosition) -> String {
         switch position {
-        case .leftMiddleVertical: return "sidebar.left"
-        case .bottomVertical: return "rectangle.portrait.bottomhalf.filled"
-        case .rightVertical: return "sidebar.right"
+        case .leftMiddleVertical: return "rectangle.lefthalf.inset.filled"
+        case .bottomVertical: return "rectangle.bottomhalf.inset.filled"
+        case .rightVertical: return "rectangle.righthalf.inset.filled"
         case .topHorizontal: return "rectangle.topthird.inset.filled"
         case .bottomHorizontal: return "rectangle.bottomthird.inset.filled"
         case .custom: return "hand.draw"
