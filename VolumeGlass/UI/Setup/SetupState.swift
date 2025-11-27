@@ -12,7 +12,7 @@ enum VolumeBarPosition: CaseIterable {
   
     var displayName: String {
         switch self {
-        case .leftMiddleVertical: return "Left Middle (Vertical)"
+        case .leftMiddleVertical: return "Left (Vertical)"
         case .bottomVertical: return "Bottom (Vertical)"
         case .rightVertical: return "Right (Vertical)"
         case .topHorizontal: return "Top (Horizontal)"
@@ -33,8 +33,11 @@ enum VolumeBarPosition: CaseIterable {
     }
   
     func getScreenPosition(screenFrame: NSRect, barSize: CGFloat) -> NSRect {
-        let windowWidth = isVertical ? CGFloat(50 * barSize) : CGFloat(240 * barSize)
-        let windowHeight = isVertical ? CGFloat(240 * barSize) : CGFloat(50 * barSize)
+        // Use fixed dimensions for window frame - barSize parameter is kept for compatibility
+        // but not used here. barSize only affects the slider dimensions in VolumeIndicatorView,
+        // not the window/container size, ensuring menu container remains consistent
+        let windowWidth = isVertical ? AppConstants.volumeBarWidth : AppConstants.volumeBarHeight
+        let windowHeight = isVertical ? AppConstants.volumeBarHeight : AppConstants.volumeBarWidth
       
         let padding: CGFloat = 40
       
@@ -102,9 +105,12 @@ class SetupState: ObservableObject {
 
         isSetupComplete = UserDefaults.standard.bool(forKey: "isSetupComplete")
     
-        if let savedPositionRaw = UserDefaults.standard.string(forKey: "volumeBarPosition"),
-           let savedPosition = VolumeBarPosition.allCases.first(where: { $0.displayName == savedPositionRaw }) {
-            self.selectedPosition = savedPosition
+        if let savedPositionRaw = UserDefaults.standard.string(forKey: "volumeBarPosition") {
+            // Handle migration from old "Left Middle (Vertical)" to new "Left (Vertical)"
+            let normalizedPosition = savedPositionRaw == "Left Middle (Vertical)" ? "Left (Vertical)" : savedPositionRaw
+            if let savedPosition = VolumeBarPosition.allCases.first(where: { $0.displayName == normalizedPosition }) {
+                self.selectedPosition = savedPosition
+            }
         }
     
         let savedSize = UserDefaults.standard.double(forKey: "barSize")
