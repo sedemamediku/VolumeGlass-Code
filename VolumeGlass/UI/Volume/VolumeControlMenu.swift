@@ -536,10 +536,10 @@ struct VolumeControlMenu: View {
             
             Divider()
             
-            // Display Style
+            // Display
             SettingRow(
                 icon: "paintbrush",
-                label: "Display Style"
+                label: "Display"
             ) {
                 Picker("", selection: $settings.displayStyle) {
                     ForEach(VolumeDisplayStyle.allCases, id: \.self) { style in
@@ -707,9 +707,9 @@ struct VolumeControlMenu: View {
     
     private func iconForPosition(_ position: VolumeBarPosition) -> String {
         switch position {
-        case .leftMiddleVertical: return "rectangle.lefthalf.inset.filled"
+        case .leftMiddleVertical: return "rectangle.leftthird.inset.filled"
         case .bottomVertical: return "rectangle.bottomhalf.inset.filled"
-        case .rightVertical: return "rectangle.righthalf.inset.filled"
+        case .rightVertical: return "rectangle.rightthird.inset.filled"
         case .topHorizontal: return "rectangle.topthird.inset.filled"
         case .bottomHorizontal: return "rectangle.bottomthird.inset.filled"
         case .custom: return "hand.draw"

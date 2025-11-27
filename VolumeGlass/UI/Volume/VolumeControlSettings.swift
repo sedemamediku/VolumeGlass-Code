@@ -25,8 +25,8 @@ enum AnimationSpeed: String, CaseIterable {
 }
 
 enum VolumeDisplayStyle: String, CaseIterable {
-    case current = "Current"
-    case liquidGlass = "Liquid Glass"
+    case current = "Dark"
+    case liquidGlass = "Light"
 }
 
 class VolumeControlSettings: ObservableObject {
@@ -111,9 +111,15 @@ class VolumeControlSettings: ObservableObject {
         
         showDragHandle = UserDefaults.standard.object(forKey: "showDragHandle") as? Bool ?? true
         
-        if let savedStyle = UserDefaults.standard.string(forKey: "displayStyle"),
-           let style = VolumeDisplayStyle(rawValue: savedStyle) {
-            displayStyle = style
+        if let savedStyle = UserDefaults.standard.string(forKey: "displayStyle") {
+            // Handle migration from old values
+            if savedStyle == "Current" {
+                displayStyle = .current
+            } else if savedStyle == "Liquid Glass" {
+                displayStyle = .liquidGlass
+            } else if let style = VolumeDisplayStyle(rawValue: savedStyle) {
+                displayStyle = style
+            }
         }
         
         if let savedHigh = UserDefaults.standard.object(forKey: "volumeHighThreshold") as? Float {
