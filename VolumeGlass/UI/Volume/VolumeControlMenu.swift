@@ -34,11 +34,13 @@ struct SettingsBackground: View {
 enum MenuPanel: Identifiable {
     case quickVolume
     case settings
+    case position
     
     var id: String {
         switch self {
         case .quickVolume: return "quickVolume"
         case .settings: return "settings"
+        case .position: return "position"
         }
     }
 }
@@ -50,7 +52,7 @@ struct VolumeControlMenu: View {
     @ObservedObject var setupState: SetupState
     let onDismiss: () -> Void
     let onShowDeviceMenu: () -> Void
-    let onShowPositionSelector: () -> Void
+    let onShowPositionSelector: (() -> Void)? = nil  // Optional, will be handled internally
     let isRightSide: Bool
     
     @State private var showPresetEditor = false
@@ -245,42 +247,48 @@ struct VolumeControlMenu: View {
     private func sidePanelView(for panel: MenuPanel) -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                    // Header with back button
+                    // Header with conditional back button
                     HStack {
-                        Button(action: {
-                            withAnimation(.spring(response: settings.animationSpeed.springResponse, dampingFraction: settings.animationSpeed.springDamping)) {
-                                activePanel = nil
-                            }
-                            if settings.hapticFeedbackEnabled {
-                                triggerHapticFeedback()
-                            }
-                        }) {
-                            HStack(spacing: 6) {
+                        // Only show back button (icon only) for position panel
+                        if panel == .position {
+                            Button(action: {
+                                withAnimation(.spring(response: settings.animationSpeed.springResponse, dampingFraction: settings.animationSpeed.springDamping)) {
+                                    // Go back to settings, don't close
+                                    activePanel = .settings
+                                }
+                                if settings.hapticFeedbackEnabled {
+                                    triggerHapticFeedback()
+                                }
+                            }) {
                                 Image(systemName: isRightSide ? "chevron.right" : "chevron.left")
                                     .font(.system(size: 12, weight: .semibold))
-                                Text("Back")
-                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.primary)
                             }
-                            .foregroundColor(.primary)
-                        }
-                        .buttonStyle(.plain)
-                        
-                        Spacer()
-                        
-                        Text(panelTitle(for: panel))
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        // Invisible spacer to center title (same width as back button)
-                        HStack(spacing: 6) {
+                            .buttonStyle(.plain)
+                            
+                            Spacer()
+                            
+                            // Center title for position panel
+                            Text(panelTitle(for: panel))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            // Invisible spacer to center title (same width as back button icon)
                             Image(systemName: isRightSide ? "chevron.right" : "chevron.left")
                                 .font(.system(size: 12, weight: .semibold))
-                            Text("Back")
-                                .font(.system(size: 13, weight: .medium))
+                                .opacity(0)
+                        } else {
+                            // For other panels, center the title
+                            Spacer()
+                            
+                            Text(panelTitle(for: panel))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
                         }
-                        .opacity(0)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -295,6 +303,8 @@ struct VolumeControlMenu: View {
                             quickVolumePanel
                         case .settings:
                             settingsPanel
+                        case .position:
+                            positionPanel
                         }
                     }
                 }
@@ -309,6 +319,7 @@ struct VolumeControlMenu: View {
         switch panel {
         case .quickVolume: return "Quick Volume"
         case .settings: return "Settings"
+        case .position: return "Change Position"
         }
     }
     
@@ -510,30 +521,19 @@ struct VolumeControlMenu: View {
             Divider()
             
             // Position
-            Button(action: {
-                onShowPositionSelector()
-                if settings.hapticFeedbackEnabled {
-                    triggerHapticFeedback()
+            MenuActionButton(
+                icon: "location",
+                label: "Change Position",
+                hasSubmenu: true,
+                action: {
+                    withAnimation(.spring(response: settings.animationSpeed.springResponse, dampingFraction: settings.animationSpeed.springDamping)) {
+                        activePanel = .position
+                    }
+                    if settings.hapticFeedbackEnabled {
+                        triggerHapticFeedback()
+                    }
                 }
-            }) {
-                HStack {
-                    Image(systemName: "location")
-                        .font(.system(size: 13, weight: .medium))
-                    Text("Change Position")
-                        .font(.system(size: 13, weight: .medium))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
+            )
             
             Divider()
             
@@ -609,6 +609,79 @@ struct VolumeControlMenu: View {
         }
         .padding(.vertical, 12)
         .padding(.bottom, 16)
+    }
+    
+    private var positionPanel: some View {
+        VStack(spacing: 16) {
+            Spacer()
+                .frame(height: 0)
+            
+            // Position options
+            VStack(spacing: 8) {
+                ForEach(VolumeBarPosition.allCases, id: \.self) { position in
+                    Button(action: {
+                        setupState.selectedPosition = position
+                        // Save immediately
+                        UserDefaults.standard.set(position.displayName, forKey: "volumeBarPosition")
+                        if settings.hapticFeedbackEnabled {
+                            triggerHapticFeedback()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: iconForPosition(position))
+                                .font(.system(size: 14, weight: .medium))
+                                .frame(width: 24)
+                            
+                            Text(position.displayName)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                            
+                            if setupState.selectedPosition == position {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.system(size: 16))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(setupState.selectedPosition == position ? Color.primary.opacity(0.15) : Color.primary.opacity(0.05))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            
+            Divider()
+            
+            // Warning
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Text("Position change requires app restart")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 16)
+        }
+    }
+    
+    private func iconForPosition(_ position: VolumeBarPosition) -> String {
+        switch position {
+        case .leftMiddleVertical: return "sidebar.left"
+        case .bottomVertical: return "rectangle.portrait.bottomhalf.filled"
+        case .rightVertical: return "sidebar.right"
+        case .topHorizontal: return "rectangle.topthird.inset.filled"
+        case .bottomHorizontal: return "rectangle.bottomthird.inset.filled"
+        case .custom: return "hand.draw"
+        }
     }
     
     private func triggerHapticFeedback() {
