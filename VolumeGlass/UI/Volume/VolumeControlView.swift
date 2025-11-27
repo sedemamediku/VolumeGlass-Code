@@ -7,7 +7,6 @@ struct VolumeControlView: View {
     @StateObject private var settings = VolumeControlSettings()
     @State private var showDeviceMenu = false
     @State private var showQuickActions = false
-    @State private var showPositionSelector = false
     @Environment(\.colorScheme) var colorScheme
     
     private var isCustomPosition: Bool {
@@ -61,9 +60,6 @@ struct VolumeControlView: View {
                         onShowDeviceMenu: {
                             showDeviceMenuWithHaptic()
                         },
-                        onShowPositionSelector: {
-                            showPositionSelector = true
-                        },
                         isRightSide: isRightSide
                     )
                         .transition(.asymmetric(
@@ -110,7 +106,8 @@ struct VolumeControlView: View {
                                 triggerHapticFeedback()
                             }
                             updateMouseEnabled()
-                        }
+                        },
+                        isRightSide: isRightSide
                     )
                         .frame(width: AppConstants.volumeBarWidth, height: AppConstants.volumeBarHeight)
                         .onLongPressGesture(minimumDuration: AppConstants.longPressDuration) {
@@ -143,9 +140,6 @@ struct VolumeControlView: View {
                         },
                         onShowDeviceMenu: {
                             showDeviceMenuWithHaptic()
-                        },
-                        onShowPositionSelector: {
-                            showPositionSelector = true
                         },
                         isRightSide: isRightSide
                     )
@@ -187,11 +181,6 @@ struct VolumeControlView: View {
         )
         .onChange(of: showQuickActions) { oldValue, newValue in updateMouseEnabled() }
         .onChange(of: showDeviceMenu) { oldValue, newValue in updateMouseEnabled() }
-        .sheet(isPresented: $showPositionSelector) {
-            if let setupState = volumeMonitor.setupState {
-                PositionSelectorView(setupState: setupState, isPresented: $showPositionSelector)
-            }
-        }
     }
     
     private func showDeviceMenuWithHaptic() {

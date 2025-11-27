@@ -5,6 +5,7 @@ struct VolumeIndicatorView: View {
     @ObservedObject var volumeMonitor: VolumeMonitor
     @ObservedObject var settings: VolumeControlSettings
     var onOpenMenu: (() -> Void)? = nil
+    var isRightSide: Bool = false  // Track if bar is on right side of screen
     
     @State private var isHovering = false
     @State private var isDragging = false
@@ -13,6 +14,8 @@ struct VolumeIndicatorView: View {
     @State private var pulseAnimation = false
     @State private var isDeviceMenuOpen = false
     @State private var isQuickActionsOpen = false
+    @State private var dragStartLocation: CGPoint = .zero
+    @State private var hasOpenedMenuFromDrag = false
     @Environment(\.colorScheme) var colorScheme
     
     private var setupState: SetupState? { volumeMonitor.setupState }
@@ -285,10 +288,29 @@ struct VolumeIndicatorView: View {
     private var verticalDragGesture: some Gesture {
         DragGesture(minimumDistance: 2)
             .onChanged { value in
-                // Open menu when drag starts
                 if !isDragging {
-                    onOpenMenu?()
+                    // Store initial drag location
+                    dragStartLocation = value.startLocation
+                    hasOpenedMenuFromDrag = false
                 }
+                
+                // Check for directional drag to open menu
+                let horizontalTranslation = value.translation.width
+                let dragThreshold: CGFloat = 20 // Minimum drag distance to trigger menu
+                
+                if !hasOpenedMenuFromDrag && abs(horizontalTranslation) > dragThreshold {
+                    // Left side: drag right (positive X) opens menu
+                    // Right side: drag left (negative X) opens menu
+                    let shouldOpenMenu = isRightSide 
+                        ? horizontalTranslation < -dragThreshold  // Right side: drag left
+                        : horizontalTranslation > dragThreshold   // Left side: drag right
+                    
+                    if shouldOpenMenu {
+                        onOpenMenu?()
+                        hasOpenedMenuFromDrag = true
+                    }
+                }
+                
                 withAnimation(.interactiveSpring(response: 0.15, dampingFraction: 0.9)) {
                     isDragging = true
                     showVolumeBar = true
@@ -303,6 +325,7 @@ struct VolumeIndicatorView: View {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                     isDragging = false
                 }
+                hasOpenedMenuFromDrag = false
                 if !isHovering && !isDeviceMenuOpen && !isQuickActionsOpen {
                     DispatchQueue.main.asyncAfter(deadline: .now() + AppConstants.dragEndTimeout) {
                         if !self.isHovering && !self.isDragging && !self.isDeviceMenuOpen && !self.isQuickActionsOpen {
@@ -318,10 +341,29 @@ struct VolumeIndicatorView: View {
     private var horizontalDragGesture: some Gesture {
         DragGesture(minimumDistance: 2)
             .onChanged { value in
-                // Open menu when drag starts
                 if !isDragging {
-                    onOpenMenu?()
+                    // Store initial drag location
+                    dragStartLocation = value.startLocation
+                    hasOpenedMenuFromDrag = false
                 }
+                
+                // Check for directional drag to open menu
+                let horizontalTranslation = value.translation.width
+                let dragThreshold: CGFloat = 20 // Minimum drag distance to trigger menu
+                
+                if !hasOpenedMenuFromDrag && abs(horizontalTranslation) > dragThreshold {
+                    // Left side: drag right (positive X) opens menu
+                    // Right side: drag left (negative X) opens menu
+                    let shouldOpenMenu = isRightSide 
+                        ? horizontalTranslation < -dragThreshold  // Right side: drag left
+                        : horizontalTranslation > dragThreshold   // Left side: drag right
+                    
+                    if shouldOpenMenu {
+                        onOpenMenu?()
+                        hasOpenedMenuFromDrag = true
+                    }
+                }
+                
                 withAnimation(.interactiveSpring(response: 0.15, dampingFraction: 0.9)) {
                     isDragging = true
                     showVolumeBar = true
@@ -336,6 +378,7 @@ struct VolumeIndicatorView: View {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                     isDragging = false
                 }
+                hasOpenedMenuFromDrag = false
                 if !isHovering && !isDeviceMenuOpen && !isQuickActionsOpen {
                     DispatchQueue.main.asyncAfter(deadline: .now() + AppConstants.dragEndTimeout) {
                         if !self.isHovering && !self.isDragging && !self.isDeviceMenuOpen && !self.isQuickActionsOpen {
